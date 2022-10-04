@@ -17,10 +17,10 @@
 mono_crash.*
 
 # Libraries
-[Ll]ibraries/
+#[Ll]ibraries/
 
 # Images
-# CelestialBackgrounds/
+CelestialBackgrounds/
 # CelestialBackgrounds/Summed
 
 # Results
