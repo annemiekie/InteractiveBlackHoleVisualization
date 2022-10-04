@@ -17,7 +17,7 @@
 mono_crash.*
 
 # Libraries
-#[Ll]ibraries/
+[Ll]ibraries/
 
 # Images
 CelestialBackgrounds/
@@ -30,9 +30,9 @@ CelestialBackgrounds/
 #*.dll
 
 # Build results
-[Dd]ebug/
+#[Dd]ebug/
 [Dd]ebugPublic/
-[Rr]elease/
+#[Rr]elease/
 [Rr]eleases/
 #x64/
 x86/
