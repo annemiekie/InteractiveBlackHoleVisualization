@@ -20,11 +20,11 @@ mono_crash.*
 [Ll]ibraries/
 
 # Images
-CelestialBackgrounds/
-CelestialBackgrounds/Summed
+# CelestialBackgrounds/
+# CelestialBackgrounds/Summed
 
 # Results
-Results/
+# Results/
 
 # DLLs
 *.dll
