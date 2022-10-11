@@ -17,7 +17,14 @@
 mono_crash.*
 
 # Libraries
-#[Ll]ibraries/
+[Ll]ibraries/libconfig-1.7.3
+[Ll]ibraries/glew-2.1.0
+[Ll]ibraries/opencv/sources
+[Ll]ibraries/opencv/build/java
+[Ll]ibraries/opencv/build/python
+[Ll]ibraries/opencv/build/etc
+[Ll]ibraries/freeglut
+[Ll]ibraries/cereal-1.3.2
 
 # Images
 Resources/
