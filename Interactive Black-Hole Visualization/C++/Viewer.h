@@ -111,7 +111,6 @@ public:
 			return;
 		}
 
-		float xdist = 1.f;
 		float yleft = tan(viewAngleWide / 2.f);
 		float step = (2.f * yleft) / pixelwidth;
 		float zup = yleft*pixelheight / pixelwidth;

@@ -23,7 +23,6 @@ public:
 		//std::string rawname = param.celestialSkyImg.substr(0, lastindex);
 		//std::string searchSummed = param.getCelestialSummedFolder() + rawname + ".tiff";
 
-
 		std::ifstream f(param.getCelestialSkyFolder() + param.celestialSkyImg);
 		if (f.good()) {
 			f.close();

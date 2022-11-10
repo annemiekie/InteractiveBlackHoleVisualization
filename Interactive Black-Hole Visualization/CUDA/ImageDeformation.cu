@@ -107,21 +107,25 @@ __global__ void distortEnvironmentMap(const float2* thphi, uchar4* out, const un
 			color.z = min(255.f, powf(color.z / color.w, 1.f / 2.2f));
 
 			float H, S, P;
-			RGBtoHSP(color.z / 255.f, color.y / 255.f, color.x / 255.f, H, S, P);
 			if (lensingOn || redshiftOn) {
-				float redshft, frac;
+				RGBtoHSP(color.z / 255.f, color.y / 255.f, color.x / 255.f, H, S, P);
+
+				float redshft = 1;
+				float frac = 1;
 				findLensingRedshift(t, p, M, ind, camParam, viewthing, frac, redshft, solidangle[ijc]);
 				if (lensingOn) P *= frac;
-				if (redshiftOn) P = redshft < 1.f ? P * 1.f / redshft : powf(P, redshft);
-				//P = powf(P, redshft); //powf(redshft, -4);
+				if (redshiftOn) P = powf(P, redshft);
+				HSPtoRGB(H, S, min(1.f, P), color.z, color.y, color.x);
+				color.x *= 255.f;
+				color.y *= 255.f;
+				color.z *= 255.f;
 			}
-			HSPtoRGB(H, S, min(1.f, P), color.z, color.y, color.x);
 		}
 	}
 	//CHANGED
-	out[ijc] = { (unsigned char)min(255, int(color.x * 255)),   
-				(unsigned char)min(255, int(color.y * 255)), 
-				(unsigned char)min(255, int(color.z * 255)), 255 };
+	out[ijc] = { (unsigned char)min(255, (int) color.x),   
+				 (unsigned char)min(255, (int) color.y), 
+				 (unsigned char)min(255, (int) color.z), 255 };
 }
 
 __global__ void makePix(float3* starLight, uchar4* out, int M, int N) {
@@ -149,11 +153,6 @@ __global__ void makePix(float3* starLight, uchar4* out, int M, int N) {
 		HSPtoRGB(hsp.x, hsp.y, hsp.z, rgb.x, rgb.y, rgb.z);
 		rgb.x *= 255; rgb.y *= 255; rgb.z *= 255;
 	}
-	//if (max > 255.f) {
-	//	sqrt_bright.y *= (255.f / max);
-	//	sqrt_bright.z *= (255.f / max);
-	//	sqrt_bright.x *= (255.f / max);
-	//}
 	out[ijc] = { (unsigned char)min(255, (int)(rgb.z + disk_b)),
 				(unsigned char)min(255, (int)(rgb.y + disk_g)),
 				(unsigned char)min(255, (int)(rgb.x + disk_r)), 255 };

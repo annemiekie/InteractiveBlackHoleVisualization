@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <vector>
 
-
 #include "Parameters.h"
 #include "BlackHole.h"
 #include "Camera.h"

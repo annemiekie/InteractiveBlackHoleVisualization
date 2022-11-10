@@ -10,6 +10,8 @@ struct Parameters {
 	int windowWidth, windowHeight = 1920;
 	double viewAngle;
 	cv::Point2i viewOffset;
+	int nrOfFrames;
+
 	std::string celestialSkyImg, starCatalogue, diffractionImg;
 	int starTreeLevel, starMagnitudeCut;
 	double br, bphi, btheta;
@@ -153,6 +155,7 @@ struct Parameters {
 			viewOffset.x = config.lookup("offsetX");
 			viewOffset.y = config.lookup("offsetY");
 			viewOffset *= PI;
+			nrOfFrames = config.lookup("nrOfFrames");
 
 			std::string str1 = config.lookup("celestialSkyImg");
 			celestialSkyImg = str1;
@@ -180,22 +183,22 @@ struct Parameters {
 
 			camSpeedChange = config.lookup("camSpeedChange");
 			if (camSpeedChange) {
-				camSpeedFromTo.x = config.lookup("camSpeedFromTo");
-				camSpeedFromTo.y = config.lookup("camSpeedFromFrom");
+				camSpeedFromTo.x = config.lookup("camSpeedFrom");
+				camSpeedFromTo.y = config.lookup("camSpeedTo");
 				camSpeedStepsize = config.lookup("camSpeedStepsize");
 			}
 
 			camRadiusChange = config.lookup("camRadiusChange");
 			if (camRadiusChange) {
-				camRadiusFromTo.x = config.lookup("camRadiusFromTo");
-				camRadiusFromTo.y = config.lookup("camRadiusFromFrom");
+				camRadiusFromTo.x = config.lookup("camRadiusFrom");
+				camRadiusFromTo.y = config.lookup("camRadiusTo");
 				camRadiusStepsize = config.lookup("camRadiusStepsize");
 			}
 
 			camInclinationChange = config.lookup("camInclinationChange");
 			if (camInclinationChange) {
-				camInclinationFromTo.x = config.lookup("camInclinationFromTo");
-				camInclinationFromTo.y = config.lookup("camInclinationFromFrom");
+				camInclinationFromTo.x = config.lookup("camInclinationFrom");
+				camInclinationFromTo.y = config.lookup("camInclinationTo");
 				camInclinationFromTo *= PI;
 				camInclinationStepsize = config.lookup("camInclinationStepsize");
 				camInclinationStepsize *= PI;

@@ -131,10 +131,6 @@ void CUDA::call(std::vector<Grid>& grids_, std::vector<Camera>& cameras_, StarPr
 	runKernels(grids, image, celestSky, stars, bhproc, starvis, param);
 }
 
-
-//bool star = false;
-//bool map = true;
-//bool dev_lr = false;
 //bool play = false;
 //float hor = 0.0f;
 //float ver = 0.0f;
@@ -512,139 +508,147 @@ void CUDA::runKernels(const Grids& grids, const Image& image, const CelestialSky
 					  const Stars& stars, const BlackHoleProc& bhproc, const StarVis& starvis, const Parameters& param) {
 
 
-	std::vector<float> camIn(7);
-	for (int q = 0; q < 7; q++) camIn[q] = grids.camParam[q];
+	std::vector<float> cameraUsed(7);
+	for (int q = 0; q < 7; q++) cameraUsed[q] = grids.camParam[q];
 	
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 	float milliseconds = 0.f;
 
-	int tpb = 32;
-	int fr =0;
+	int threadsPerBlock_32 = 32;
+	int numBlocks_starsize = stars.starSize / threadsPerBlock_32 + 1;
+	int numBlocks_bordersize = (bhproc.angleNum * 2) / threadsPerBlock_32 + 1;
 
-	dim3 simplethreads(5, 25);
-	dim3 numBlocks2((grids.GN - 1) / simplethreads.x + 1, (grids.GM - 1) / simplethreads.y + 1);
-	dim3 threadsPerBlock(TILE_H, TILE_W);
-	dim3 numBlocks((image.N - 1) / threadsPerBlock.x + 1, (image.M - 1) / threadsPerBlock.y + 1);
-	dim3 numBlocksM1(image.N / threadsPerBlock.x + 1, image.M / threadsPerBlock.y + 1);
-	dim3 simpleblocks((image.N - 1) / simplethreads.x + 1, (image.M - 1) / simplethreads.y + 1);
-	dim3 simpleblocks2((grids.GN1 - 1) / simplethreads.x + 1, (grids.GM - 1) / simplethreads.y + 1);
-	dim3 interthreads(5, 25);
-	dim3 interblocks(image.N / interthreads.x + 1, image.M / interthreads.y + 1);
-	dim3 testthreads(1, 24);
-	dim3 testblocks((image.N - 1) / testthreads.x + 1, (image.M - 1) / testthreads.y + 1);
+	dim3 threadsPerBlock4_4(4, 4);
+	dim3 numBlocks_N_M_4_4((image.N - 1) / threadsPerBlock4_4.x + 1, (image.M - 1) / threadsPerBlock4_4.y + 1);
+	dim3 numBlocks_N1_M1_4_4(image.N / threadsPerBlock4_4.x + 1, image.M / threadsPerBlock4_4.y + 1);
+	dim3 numBlocks_GN_GM_4_4((grids.GN - 1) / threadsPerBlock4_4.x + 1, (grids.GM - 1) / threadsPerBlock4_4.y + 1);
+
+	dim3 threadsPerBlock5_25(5, 25);
+	dim3 numBlocks_GN_GM_5_25((grids.GN - 1) / threadsPerBlock5_25.x + 1, (grids.GM - 1) / threadsPerBlock5_25.y + 1);
+	dim3 numBlocks_N_M_5_25((image.N - 1) / threadsPerBlock5_25.x + 1, (image.M - 1) / threadsPerBlock5_25.y + 1);
+	dim3 numBlocks_N1_M1_5_25(image.N / threadsPerBlock5_25.x + 1, image.M / threadsPerBlock5_25.y + 1);
+
+	dim3 threadsPerBlock1_24(1, 24);
+	dim3 numBlocks_N_M_1_24((image.N - 1) / threadsPerBlock1_24.x + 1, (image.M - 1) / threadsPerBlock1_24.y + 1);
+
 
 	std::cout << "Running Kernels" << std::endl << std::endl;
 
 	if (grids.G == 1) {
-		callKernel("Expanded grid", makeGrid, numBlocks2, simplethreads, 
+		callKernel("Expanded grid", makeGrid, numBlocks_GN_GM_5_25, threadsPerBlock5_25,
 					0, grids.GM, grids.GN, grids.GN1, dev_grid, 
 					dev_hashTable, dev_hashPosTag, dev_offsetTable, dev_tableSize, 0, grids.sym);
 		dev_camera0 = dev_cameras;
 		checkCudaErrors();
 	}
 
-	float prec = 0.f;
+	float grid_value = 0.f;
 	float alpha = 0.f;
-	int gnr = 0;
-	int movielength = 1;
+	int grid_nr = -1;
+	int startframe = 0;
 
-	for (int q = movielength*fr; q < movielength* (fr + 1); q++) {
-		float speed = 1.f/camIn[0];
+	for (int q = 0 + startframe; q < param.nrOfFrames + startframe; q++) {
+		float speed = 1.f/ cameraUsed[0];
 		float offset = PI2*q / (.25f*speed*image.M);
 
 		if (grids.G > 1) {
-			prec = fmodf(prec, (float)grids.G - 1.f);
-			std::cout << prec << std::endl;
-			alpha = fmodf(prec, 1.f);
-			//if (gnr != (int)prec) {
-			//	gnr = (int)prec;
-			//
-			//	cudaEventRecord(start);
-			//	makeGrid << < numBlocks2, simplethreads >> >(gnr, grids.GM, grids.GN, grids.GN1, dev_grid, dev_hashTable, dev_hashPosTag, dev_offsetTable, dev_tableSize, 0, dev_sym);
-			//	makeGrid << < numBlocks2, simplethreads >> >(gnr + 1, grids.GM, grids.GN, dev_GN1, dev_grid, dev_hashTable, dev_hashPosTag, dev_offsetTable, dev_tableSize, 1, dev_sym);
-			//	cudaEventRecord(stop), cudaEventSynchronize(stop), cudaEventElapsedTime(&milliseconds, start, stop);
-			//	std::cout << "makeGrid " << milliseconds << std::endl;
-			//
-			//	cudaEventRecord(start);
-			//	findBhCenter << < simpleblocks2, simplethreads >> >(grids.GM, grids.GN1, dev_grid, dev_bhBorder);
-			//	cudaEventRecord(stop), cudaEventSynchronize(stop), cudaEventElapsedTime(&milliseconds, start, stop);
-			//	std::cout << "findBHCenter " << milliseconds << std::endl;
-			//
-			//	cudaEventRecord(start);
-			//	findBhBorders << < dev_angleNum * 2 / tpb + 1, tpb >> >(grids.GM, grids.GN1, dev_grid, angleNum, dev_bhBorder);
-			//	cudaEventRecord(stop), cudaEventSynchronize(stop), cudaEventElapsedTime(&milliseconds, start, stop);
-			//	std::cout << "findBHBorder " << milliseconds << std::endl;
-			//
-			//	cudaEventRecord(start);
-			//	smoothBorder << <dev_angleNum * 2 / tpb + 1, tpb >> >(dev_bhBorder, dev_bhBorder2, angleNum);
-			//	smoothBorder << <dev_angleNum * 2 / tpb + 1, tpb >> >(dev_bhBorder2, dev_bhBorder, angleNum);
-			//	smoothBorder << <dev_angleNum * 2 / tpb + 1, tpb >> >(dev_bhBorder, dev_bhBorder2, angleNum);
-			//	smoothBorder << <dev_angleNum * 2 / tpb + 1, tpb >> >(dev_bhBorder2, dev_bhBorder, angleNum);
-			//	cudaEventRecord(stop), cudaEventSynchronize(stop), cudaEventElapsedTime(&milliseconds, start, stop);
-			//	std::cout << "smoothBorder " << milliseconds << std::endl;
-			//
-			//	displayborders << <dev_angleNum * 2 / tpb + 1, tpb >> >(angleNum, dev_bhBorder, dev_img, image.M);
-			//}
-			//camUpdate << <1, 8>> >(alpha, gnr, dev_cam, dev_camIn);
-			//copyHostToDevice(&camIn[0], dev_camIn, 7 * sizeof(float), cudaMemcpyDeviceToHost), "cudaMemcpy failed! Dev to Host Cam");
-			//prec += .05f;
+			grid_value = fmodf(grid_value, (float)grids.G - 1.f);
+			std::cout << "Computing grid: " << grid_value << std::endl;
+			alpha = fmodf(grid_value, 1.f);
+			if (grid_nr != (int)grid_value) {
+				grid_nr = (int)grid_value;
+			
+				callKernel("Made grid A", makeGrid, numBlocks_GN_GM_5_25, threadsPerBlock5_25,
+							grid_nr, grids.GM, grids.GN, grids.GN1, dev_grid, dev_hashTable, dev_hashPosTag, 
+							dev_offsetTable, dev_tableSize, 0, grids.sym);
+				
+				callKernel("Made grid B", makeGrid, numBlocks_GN_GM_5_25, threadsPerBlock5_25,
+							grid_nr + 1, grids.GM, grids.GN, grids.GN1, dev_grid, dev_hashTable, dev_hashPosTag,
+							dev_offsetTable, dev_tableSize, 1, grids.sym);
+
+				callKernel("Find black-hole shadow center", findBhCenter, numBlocks_GN_GM_5_25, threadsPerBlock5_25,
+							grids.GM, grids.GN1, dev_grid, dev_blackHoleBorder0);
+				
+				callKernel("Find black-hole shadow border", findBhBorders, numBlocks_bordersize, threadsPerBlock_32,
+							grids.GM, grids.GN1, dev_grid, bhproc.angleNum, dev_blackHoleBorder0);
+		
+				callKernel("Smoothed shadow border 1/4", smoothBorder, numBlocks_bordersize, threadsPerBlock_32,
+							dev_blackHoleBorder0, dev_blackHoleBorder1, bhproc.angleNum);
+
+				callKernel("Smoothed shadow border 2/4", smoothBorder, numBlocks_bordersize, threadsPerBlock_32,
+							dev_blackHoleBorder1, dev_blackHoleBorder0, bhproc.angleNum);
+
+				callKernel("Smoothed shadow border 3/4", smoothBorder, numBlocks_bordersize, threadsPerBlock_32,
+							dev_blackHoleBorder0, dev_blackHoleBorder1, bhproc.angleNum);
+
+				callKernel("Smoothed shadow border 4/4", smoothBorder, numBlocks_bordersize, threadsPerBlock_32,
+							dev_blackHoleBorder1, dev_blackHoleBorder0, bhproc.angleNum);
+
+				//displayborders << <dev_angleNum * 2 / tpb + 1, tpb >> >(angleNum, dev_bhBorder, dev_img, image.M);
+			}
+			callKernel("Update Camera", camUpdate, 1, 8, alpha, grid_nr, dev_cameras, dev_camera0);
+
+			checkCudaStatus(cudaMemcpy(&cameraUsed[0], dev_camera0, 7 * sizeof(float), cudaMemcpyDeviceToHost), "cudaMemcpy failed! Dev to Host Cam");
+
+			grid_value += .5f;
 		}
-		else gnr = 0;
 
 		cudaEventRecord(start);
-		callKernel("Interpolated grid", pixInterpolation, interblocks, interthreads, 
+		callKernel("Interpolated grid", pixInterpolation, numBlocks_N1_M1_5_25, threadsPerBlock5_25,
 					dev_viewer, image.M, image.N, grids.G, dev_interpolatedGrid, dev_grid, grids.GM, grids.GN1, 
 					hor, ver, dev_gridGap, grids.level, dev_blackHoleBorder0, bhproc.angleNum, alpha);
 
-		callKernel("Constructed black hole shadow mask", findBlackPixels, simpleblocks, simplethreads,
+		callKernel("Constructed black-hole shadow mask", findBlackPixels, numBlocks_N_M_5_25, threadsPerBlock5_25,
 					dev_interpolatedGrid, image.M, image.N, dev_blackHoleMask);
 
-		callKernel("Calculated solid angles", findArea, simpleblocks, simplethreads,
+		callKernel("Calculated solid angles", findArea, numBlocks_N_M_5_25, threadsPerBlock5_25,
 					dev_interpolatedGrid, image.M, image.N, dev_solidAngles0);
 
-		callKernel("Smoothed solid angles horizontally", smoothAreaH, simpleblocks, simplethreads,
+		callKernel("Smoothed solid angles horizontally", smoothAreaH, numBlocks_N_M_5_25, threadsPerBlock5_25,
 					dev_solidAngles1, dev_solidAngles0, dev_blackHoleMask, dev_gridGap, image.M, image.N);
 
-		callKernel("Smoothed solid angles vertically", smoothAreaV, simpleblocks, simplethreads,
+		callKernel("Smoothed solid angles vertically", smoothAreaV, numBlocks_N_M_5_25, threadsPerBlock5_25,
 					dev_solidAngles0, dev_solidAngles1, dev_blackHoleMask, dev_gridGap, image.M, image.N);
 
 
 		if (star) {
-			int nb = stars.starSize / tpb + 1;
-			callKernel("Cleared star cache", clearArrays, nb, tpb,
+			callKernel("Cleared star cache", clearArrays, numBlocks_starsize, threadsPerBlock_32,
 						dev_nrOfImagesPerStar, dev_starCache, q, starvis.trailnum, stars.starSize);
 
-			callKernel("Calculated gradient field for star trails", makeGradField, interblocks, interthreads,
+			callKernel("Calculated gradient field for star trails", makeGradField, numBlocks_N1_M1_4_4, threadsPerBlock4_4,
 						dev_interpolatedGrid, image.M, image.N, dev_gradient);
 
-			callKernel("Distorted star map", distortStarMap, numBlocks, threadsPerBlock,
+			callKernel("Distorted star map", distortStarMap, numBlocks_N_M_4_4, threadsPerBlock4_4,
 						dev_starLight0, dev_interpolatedGrid, dev_blackHoleMask, dev_starPositions, dev_starTree, stars.starSize, 
 						dev_camera0, dev_starMagnitudes, stars.treeLevel,
 						image.M, image.N, starvis.gaussian, offset, dev_treeSearch, starvis.searchNr, dev_starCache, dev_nrOfImagesPerStar, 
 						dev_starTrails, starvis.trailnum, dev_gradient, q, dev_viewer, redshiftOn, lensingOn, dev_solidAngles0);
 
-			//callKernel("Summed all star light", sumStarLight, testblocks, testthreads,
-			//			dev_starLight0, dev_starTrails, dev_starLight1, starvis.gaussian, image.M, image.N, starvis.diffusionFilter);
+			callKernel("Summed all star light", sumStarLight, numBlocks_N_M_1_24, threadsPerBlock1_24,
+						dev_starLight0, dev_starTrails, dev_starLight1, starvis.gaussian, image.M, image.N, starvis.diffusionFilter);
 
-			//callKernel("Added diffraction", addDiffraction, numBlocks, threadsPerBlock,
-			//			dev_starLight1, image.M, image.N, dev_diffraction, starvis.diffSize);
+			callKernel("Added diffraction", addDiffraction, numBlocks_N_M_4_4, threadsPerBlock4_4,
+						dev_starLight1, image.M, image.N, dev_diffraction, starvis.diffSize);
 
-			if (!map) callKernel("Created pixels from star light", makePix, simpleblocks, simplethreads,
-								 dev_starLight1, dev_outputImage, image.M, image.N);
+			if (!map) {
+				callKernel("Created pixels from star light", makePix, numBlocks_N_M_5_25, threadsPerBlock5_25,
+							dev_starLight1, dev_outputImage, image.M, image.N);
+			}
 		}
 
-		if (map) callKernel("Distorted celestial sky image", distortEnvironmentMap, numBlocks, threadsPerBlock,
-							dev_interpolatedGrid, dev_outputImage, dev_blackHoleMask, celestialSky.imsize, image.M, image.N, offset, 
-							dev_summedCelestialSky, dev_cameras, dev_solidAngles0, dev_viewer, redshiftOn, lensingOn);
-
+		if (map) {
+			callKernel("Distorted celestial sky image", distortEnvironmentMap, numBlocks_N_M_4_4, threadsPerBlock4_4,
+						dev_interpolatedGrid, dev_outputImage, dev_blackHoleMask, celestialSky.imsize, image.M, image.N, offset, 
+						dev_summedCelestialSky, dev_cameras, dev_solidAngles0, dev_viewer, redshiftOn, lensingOn);
+		}
 
 		if (star && map) {
-			callKernel("Created pixels from star light", makePix, simpleblocks, simplethreads,
+			callKernel("Created pixels from star light", makePix, numBlocks_N_M_5_25, threadsPerBlock5_25,
 						dev_starLight1, dev_starImage, image.M, image.N);
 
-			callKernel("Added distorted star and celestial sky image", addStarsAndBackground, simpleblocks, simplethreads,
+			callKernel("Added distorted star and celestial sky image", addStarsAndBackground, numBlocks_N_M_5_25, threadsPerBlock5_25,
 						dev_starImage, dev_outputImage, dev_outputImage, image.M);
 		}
 		std::cout << std::endl;
@@ -654,8 +658,7 @@ void CUDA::runKernels(const Grids& grids, const Image& image, const CelestialSky
 		// Copy output vector from GPU buffer to host memory.
 		checkCudaStatus(cudaMemcpy(&image.result[0], dev_outputImage, image.N * image.M *  sizeof(uchar4), cudaMemcpyDeviceToHost), "cudaMemcpy failed! Dev to Host");
 		cv::Mat img = cv::Mat(image.N, image.M, CV_8UC4, (void*)&image.result[0]);
-		cv::imwrite(param.getResultFileName(alpha, q), img, image.compressionParams);
+		cv::imwrite(param.getResultFileName(grid_value, q), img, image.compressionParams);
 	}
-	prec = 0.f;
-	gnr = -1;
+
 }

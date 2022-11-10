@@ -10,8 +10,10 @@ viewAngle = 0.5 //*PI
 offsetX = 0 // *PI
 offsetY = 0 // *PI
 
+nrOfFrames = 50
+
 // Image location.
-celestialSkyImg = "cloud5.jpeg"
+celestialSkyImg = "nebula_red.jpeg"
 // Star file location.
 starCatalogue = "sterren.txt"
 // Star binary tree depth
@@ -45,9 +47,9 @@ camSpeedFrom = 0.32001
 camSpeedTo = 0.0001
 camSpeedStepsize = 0.02
 
-camRadiusChange = false
+camRadiusChange = true
 camRadiusFrom = 5.
-camRadiusTo = 1.5
+camRadiusTo = 10.
 camRadiusStepsize = 0.2
 
 camInclinationChange = false

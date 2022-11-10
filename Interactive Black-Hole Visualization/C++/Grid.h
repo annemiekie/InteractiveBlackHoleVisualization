@@ -391,8 +391,7 @@ private:
 		auto end_time = std::chrono::high_resolution_clock::now();
 		int count = 0;
 		for (int q = 0; q < s; q++) if (step[q] != 0) count++;
-		std::cout << "CPU: " << count << "rays in " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() << "ms!" << std::endl << std::endl;
-		//}
+		//std::cout << "CPU: " << count << "rays in " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() << "ms!" << std::endl << std::endl;
 	}
 
 	/// <summary>
