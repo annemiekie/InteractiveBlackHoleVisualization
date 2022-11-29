@@ -123,7 +123,7 @@ __global__ void distortEnvironmentMap(const float2* thphi, uchar4* out, const un
 				}
 			}
 		}
-		//CHANGED
+	}	//CHANGED
 	if (colorInvert) {
 		out[ijc] = { (unsigned char)min(255, (int)color.z),
 					   (unsigned char)min(255, (int)color.y),
