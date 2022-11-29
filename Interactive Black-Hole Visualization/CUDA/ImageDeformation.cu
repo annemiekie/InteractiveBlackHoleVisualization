@@ -2,7 +2,7 @@
 
 __global__ void distortEnvironmentMap(const float2* thphi, uchar4* out, const unsigned char* bh, const int2 imsize,
 										const int M, const int N, float offset, float4* sumTable, const float* camParam,
-										const float* solidangle, float2* viewthing, bool redshiftOn, bool lensingOn) {
+										const float* solidangle, float2* viewthing, bool redshiftOn, bool lensingOn, bool colorInvert) {
 
 	int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int j = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -123,9 +123,17 @@ __global__ void distortEnvironmentMap(const float2* thphi, uchar4* out, const un
 		}
 	}
 	//CHANGED
-	out[ijc] = { (unsigned char)min(255, (int) color.x),   
-				 (unsigned char)min(255, (int) color.y), 
-				 (unsigned char)min(255, (int) color.z), 255 };
+	if (colorInvert) {
+		out[ijc] = { (unsigned char)min(255, (int)color.z),
+					   (unsigned char)min(255, (int)color.y),
+					   (unsigned char)min(255, (int)color.x), 255 };
+	}
+	else {
+		out[ijc] = { (unsigned char)min(255, (int)color.x),
+					   (unsigned char)min(255, (int)color.y),
+					   (unsigned char)min(255, (int)color.z), 255 };
+	}
+
 }
 
 __global__ void makePix(float3* starLight, uchar4* out, int M, int N) {
