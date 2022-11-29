@@ -106,13 +106,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\cereal-1.3.2\include;$(SolutionDir)Libraries\freeglut\include;$(SolutionDir)Libraries\opencv\build\include;$(SolutionDir)Libraries\libconfig-1.7.3\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\cereal-1.3.2\include;$(SolutionDir)Libraries\freeglut\include;$(SolutionDir)Libraries\opencv\build\include;$(SolutionDir)Libraries\libconfig-1.7.3\lib;$(SolutionDir)Libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Libraries\libconfig-1.7.3\build\x64\;$(SolutionDir)Libraries\opencv\build\x64\vc15\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libconfigd.lib;libconfig++d.lib;opencv_world460d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Libraries\libconfig-1.7.3\build\x64\;$(SolutionDir)Libraries\opencv\build\x64\vc15\lib;$(SolutionDir)Libraries\glew-2.1.0\lib\Release\x64;$(SolutionDir)Libraries\freeglut\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libconfigd.lib;libconfig++d.lib;opencv_world460d.lib;glew32.lib;freeglut.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
@@ -128,15 +129,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\cereal-1.3.2\include;$(SolutionDir)Libraries\freeglut\include;$(SolutionDir)Libraries\opencv\build\include;$(SolutionDir)Libraries\libconfig-1.7.3\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\cereal-1.3.2\include;$(SolutionDir)Libraries\freeglut\include;$(SolutionDir)Libraries\opencv\build\include;$(SolutionDir)Libraries\libconfig-1.7.3\lib;$(SolutionDir)Libraries\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Libraries\libconfig-1.7.3\build\x64\;$(SolutionDir)Libraries\opencv\build\x64\vc15\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libconfig.lib;libconfig++.lib;opencv_world460.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Libraries\libconfig-1.7.3\build\x64\;$(SolutionDir)Libraries\opencv\build\x64\vc15\lib;$(SolutionDir)Libraries\glew-2.1.0\lib\Release\x64;$(SolutionDir)Libraries\freeglut\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libconfig.lib;libconfig++.lib;opencv_world460.lib;%(AdditionalDependencies);glew32.lib;freeglut.lib</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
