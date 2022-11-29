@@ -262,91 +262,93 @@ __global__ void distortStarMap(float3* starLight, const float2* thphi, const uns
 		}
 	}
 
-	// Only compute if pixel is not black hole.
-	if (bh[ijc] == 0) {
+	// Only compute if pixel is in bounds and not black hole.
+	if (i < N && j < M) {
+		if (bh[ijc] == 0) {
 
-		// Set values for projected pixel corners & update phi values in case of 2pi crossing.
-		float t[4], p[4];
-		int ind = i * M1 + j;
-		bool picheck = false;
-		retrievePixelCorners(thphi, t, p, ind, M, picheck, offset);
+			// Set values for projected pixel corners & update phi values in case of 2pi crossing.
+			volatile float t[4], p[4];
+			int ind = i * M1 + j;
+			bool picheck = false;
+			retrievePixelCorners(thphi, const_cast<float*>(t), const_cast<float*>(p), ind, M, picheck, offset);
 
-		// Search where in the star tree the bounding box of the projected pixel falls.
-		const float thphiPixMax[2] = { max(max(t[0], t[1]), max(t[2], t[3])),
-										max(max(p[0], p[1]), max(p[2], p[3])) };
-		const float thphiPixMin[2] = { min(min(t[0], t[1]),  min(t[2], t[3])),
-										min(min(p[0], p[1]),  min(p[2], p[3])) };
-		int pos = 0;
-		int startnr = searchNr * (ijc);
-		searchTree(tree, thphiPixMin, thphiPixMax, treeLevel, search, startnr, pos, 0);
-		if (pos == 0) return;
+			// Search where in the star tree the bounding box of the projected pixel falls.
+			const float thphiPixMax[2] = { max(max(t[0], t[1]), max(t[2], t[3])),
+											max(max(p[0], p[1]), max(p[2], p[3])) };
+			const float thphiPixMin[2] = { min(min(t[0], t[1]),  min(t[2], t[3])),
+											min(min(p[0], p[1]),  min(p[2], p[3])) };
+			int pos = 0;
+			int startnr = searchNr * (ijc);
+			searchTree(tree, thphiPixMin, thphiPixMax, treeLevel, search, startnr, pos, 0);
+			if (pos == 0) return;
 
-		// Calculate orientation and size of projected polygon (positive -> CW, negative -> CCW)
-		float orient = (t[1] - t[0]) * (p[1] + p[0]) + (t[2] - t[1]) * (p[2] + p[1]) +
-			(t[3] - t[2]) * (p[3] + p[2]) + (t[0] - t[3]) * (p[0] + p[3]);
-		int sgn = orient < 0 ? -1 : 1;
+			// Calculate orientation and size of projected polygon (positive -> CW, negative -> CCW)
+			float orient = (t[1] - t[0]) * (p[1] + p[0]) + (t[2] - t[1]) * (p[2] + p[1]) +
+				(t[3] - t[2]) * (p[3] + p[2]) + (t[0] - t[3]) * (p[0] + p[3]);
+			int sgn = orient < 0 ? -1 : 1;
 
-		// Calculate redshift and lensing effect
-		float redshft = 1.f;
-		float frac = 1.f;
-		if (lensingOn || redshiftOn) findLensingRedshift(t, p, M, ind, camParam, viewthing, frac, redshft, area[ijc]);
-		float red = 4.f * log10f(redshft);
-		float maxDistSq = (step + .5f) * (step + .5f);
+			// Calculate redshift and lensing effect
+			float redshft = 1.f;
+			float frac = 1.f;
+			if (lensingOn || redshiftOn) findLensingRedshift(t, p, M, ind, camParam, viewthing, frac, redshft, area[ijc]);
+			float red = 4.f * log10f(redshft);
+			float maxDistSq = (step + .5f) * (step + .5f);
 
 
-		// Calculate amount of stars to check
-		int starsToCheck = 0;
-		for (int s = 0; s < pos; s++) {
-			int node = search[startnr + s];
-			int startN = 0;
-			if (node != 0 && ((node + 1) & node) != 0) {
-				startN = tree[node - 1];
-			}
-			starsToCheck += (tree[node] - startN);
-		}
-
-		// Check stars in tree leaves
-		for (int s = 0; s < pos; s++) {
-			int node = search[startnr + s];
-			int startN = 0;
-			if (node != 0 && ((node + 1) & node) != 0) {
-				startN = tree[node - 1];
-			}
-			for (int q = startN; q < tree[node]; q++) {
-				float start = stars[2 * q];
-				float starp = stars[2 * q + 1];
-				bool starInPoly = starInPolygon(t, p, start, starp, sgn);
-				if (picheck && !starInPoly && starp < PI2c * .2f) {
-					starp += PI2c;
-					starInPoly = starInPolygon(t, p, start, starp, sgn);
+			// Calculate amount of stars to check
+			int starsToCheck = 0;
+			for (int s = 0; s < pos; s++) {
+				int node = search[startnr + s];
+				int startN = 0;
+				if (node != 0 && ((node + 1) & node) != 0) {
+					startN = tree[node - 1];
 				}
-				if (starInPoly) {
-					interpolate(t[0], t[1], t[2], t[3], p[0], p[1], p[2], p[3], start, starp, sgn, i, j);
-					float part = magnitude[2 * q] + red;
-					float temp = 46.f / redshft * ((1.f / ((0.92f * magnitude[2 * q + 1]) + 1.7f)) +
-						(1.f / ((0.92f * magnitude[2 * q + 1]) + 0.62f))) - 10.f;
-					int index = max(0, min((int)floorf(temp), 1170));
-					float3 rgb = { tempToRGB[3 * index], tempToRGB[3 * index + 1], tempToRGB[3 * index + 2] };
-					//if (magnitude[2 * q] < -1) rgb = {0,255,0};
-					float3 hsp;
-					RGBtoHSP(rgb.x / 255.f, rgb.y / 255.f, rgb.z / 255.f, hsp.x, hsp.y, hsp.z);
+				starsToCheck += (tree[node] - startN);
+			}
 
-					addTrails(starsToCheck, starSize, framenumber, stnums, trail, grad, stCache, q, i, j, M, trailnum, part, frac, hsp);
+			// Check stars in tree leaves
+			for (int s = 0; s < pos; s++) {
+				int node = search[startnr + s];
+				int startN = 0;
+				if (node != 0 && ((node + 1) & node) != 0) {
+					startN = tree[node - 1];
+				}
+				for (int q = startN; q < tree[node]; q++) {
+					float start = stars[2 * q];
+					float starp = stars[2 * q + 1];
+					bool starInPoly = starInPolygon(const_cast<float*>(t), const_cast<float*>(p), start, starp, sgn);
+					if (picheck && !starInPoly && starp < PI2c * .2f) {
+						starp += PI2c;
+						starInPoly = starInPolygon(const_cast<float*>(t), const_cast<float*>(p), start, starp, sgn);
+					}
+					if (starInPoly) {
+						interpolate(t[0], t[1], t[2], t[3], p[0], p[1], p[2], p[3], start, starp, sgn, i, j);
+						float part = magnitude[2 * q] + red;
+						float temp = 46.f / redshft * ((1.f / ((0.92f * magnitude[2 * q + 1]) + 1.7f)) +
+							(1.f / ((0.92f * magnitude[2 * q + 1]) + 0.62f))) - 10.f;
+						int index = max(0, min((int)floorf(temp), 1170));
+						float3 rgb = { tempToRGB[3 * index], tempToRGB[3 * index + 1], tempToRGB[3 * index + 2] };
+						//if (magnitude[2 * q] < -1) rgb = {0,255,0};
+						float3 hsp;
+						RGBtoHSP(rgb.x / 255.f, rgb.y / 255.f, rgb.z / 255.f, hsp.x, hsp.y, hsp.z);
 
-					for (int u = 0; u <= 2 * step; u++) {
-						for (int v = 0; v <= 2 * step; v++) {
-							float dist = distSq(-step + u + .5f, start, -step + v + .5f, starp);
-							if (dist > maxDistSq) continue;
-							else {
-								float appMag = part - 2.5f * log10f(frac * gaussian(dist, step));
-								float brightness = 100 * exp10f(-.4f * appMag);
-								HSPtoRGB(hsp.x, hsp.y, hsp.z * brightness, rgb.x, rgb.y, rgb.z);
-								rgb.x *= 255.f;
-								rgb.y *= 255.f;
-								rgb.z *= 255.f;
-								starLight[filterW * filterW * ijc + filterW * u + v].x += rgb.x * rgb.x;
-								starLight[filterW * filterW * ijc + filterW * u + v].y += rgb.y * rgb.y;
-								starLight[filterW * filterW * ijc + filterW * u + v].z += rgb.z * rgb.z;
+						addTrails(starsToCheck, starSize, framenumber, stnums, trail, grad, stCache, q, i, j, M, trailnum, part, frac, hsp);
+
+						for (int u = 0; u <= 2 * step; u++) {
+							for (int v = 0; v <= 2 * step; v++) {
+								float dist = distSq(-step + u + .5f, start, -step + v + .5f, starp);
+								if (dist > maxDistSq) continue;
+								else {
+									float appMag = part - 2.5f * log10f(frac * gaussian(dist, step));
+									float brightness = 100 * exp10f(-.4f * appMag);
+									HSPtoRGB(hsp.x, hsp.y, hsp.z * brightness, rgb.x, rgb.y, rgb.z);
+									rgb.x *= 255.f;
+									rgb.y *= 255.f;
+									rgb.z *= 255.f;
+									starLight[filterW * filterW * ijc + filterW * u + v].x += rgb.x * rgb.x;
+									starLight[filterW * filterW * ijc + filterW * u + v].y += rgb.y * rgb.y;
+									starLight[filterW * filterW * ijc + filterW * u + v].z += rgb.z * rgb.z;
+								}
 							}
 						}
 					}

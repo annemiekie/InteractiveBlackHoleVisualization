@@ -140,9 +140,7 @@ __device__ void RGBtoHSP(float  R, float  G, float  B, float& H, float& S, float
 
 __device__ void HSPtoRGB(float  H, float  S, float  P, float& R, float& G, float& B) {
 	float part, minOverMax = 1.f - S;
-
-	if (minOverMax > 0) { // changed!
-
+	if (minOverMax > 0.f) {
 		if (H < 1.f / 6.f) {   //  R>G>B
 			H = 6.f * H;
 			part = 1.f + H * (1.f / minOverMax - 1.f);
@@ -371,9 +369,9 @@ __device__ void bv2rgb(float& r, float& g, float& b, float bv)    // RGB <0,1> <
 }
 
 
-__device__ void findLensingRedshift(const float* t, const float* p, const int M, const int ind, const float* camParam,
+__device__ void findLensingRedshift(volatile float* t, volatile float* p, const int M, const int ind, const float* camParam,
 									const float2* viewthing, float& frac, float& redshft, float solidAngle) {
-	if (solidAngle == 0.f) {
+	if (solidAngle == 0.f) {	
 		float th1[3] = { t[0], t[1], t[2] };
 		float ph1[3] = { p[0], p[1], p[2] };
 		float th2[3] = { t[0], t[2], t[3] };
