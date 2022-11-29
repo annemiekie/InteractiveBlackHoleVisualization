@@ -368,9 +368,9 @@ __device__ void bv2rgb(float& r, float& g, float& b, float bv)    // RGB <0,1> <
 }
 
 
-__device__ void findLensingRedshift(const float* t, const float* p, const int M, const int ind, const float* camParam,
+__device__ void findLensingRedshift(volatile float* t, volatile float* p, const int M, const int ind, const float* camParam,
 	const float2* viewthing, float& frac, float& redshft, float solidAngle) {
-	if (solidAngle == 0.f) {
+	if (solidAngle == 0.f) {	
 		float th1[3] = { t[0], t[1], t[2] };
 		float ph1[3] = { p[0], p[1], p[2] };
 		float th2[3] = { t[0], t[2], t[3] };

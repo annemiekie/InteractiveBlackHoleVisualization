@@ -13,7 +13,7 @@ offsetY = 0 // *PI
 nrOfFrames = 50
 
 // Image location.
-celestialSkyImg = "nebula_red.jpeg"
+celestialSkyImg = "rainbow.png"
 // Star file location.
 starCatalogue = "sterren.txt"
 // Star binary tree depth

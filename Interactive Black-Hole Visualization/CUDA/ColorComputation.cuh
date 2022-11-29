@@ -83,5 +83,5 @@ __device__ __host__ float calcAreax(float t[3], float p[3]);
 
 __device__ void bv2rgb(float& r, float& g, float& b, float bv);
 
-__device__ void findLensingRedshift(const float* t, const float* p, const int M, const int ind, const float* camParam,
+__device__ void findLensingRedshift(volatile float* t, volatile float* p, const int M, const int ind, const float* camParam,
 	const float2* viewthing, float& frac, float& redshft, float solidAngle);
